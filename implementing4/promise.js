@@ -3,7 +3,7 @@ function MyPromise(fn) {
   this.status = 'pending';
   this.resolveFunc = function() {};
   this.rejectFunc = function() {};
-  fn();
+  fn(this.resolve.bind(this), this.reject.bind(this));
 }
 
 MyPromise.prototype.resolve = function(val) {

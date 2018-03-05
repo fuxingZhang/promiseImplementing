@@ -75,23 +75,21 @@ Promise.prototype.catch = function(onRejected){
 }
 
 var print = (value) => new Promise( (resolve,reject) => {
-    throw new Error('test0')
-	setTimeout(function(){
-        resolve(value)
-    },1000)
-    console.log(000,value)
+    reject(value)
 })
 
-var p =print('zfx')
-
-p
-.then(function(value){
+var p = print('zfx')
+p.then(function(value){
+    console.log(111,value)
     console.log('resolve', p)
-    console.log(value)
-    return 'next'
+    return 'resolve'
+},function(reason){
+    console.log('reason',reason)
+    throw new Error('throw')
+    return 'reject'
 })
 .then(function(v){
-    console.log(v)
-    throw new Error('test')
+    console.log(222,v)
+},function(reason){
+    console.log('reason',reason)
 })
-.catch( e => console.log(22222222,e) )

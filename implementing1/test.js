@@ -1,31 +1,25 @@
 var Promise = require('./promise.js')
 
-var get = (value) => new Promise( (resolve, reject) => {
-	setTimeout( function(){
-		resolve(value)
-	}, 1000)
+var print = (value) => new Promise( (resolve,reject) => {
+    throw new Error('test0')
+	setTimeout(function(){
+        resolve(value)
+    },1000)
+    console.log(000,value)
 })
 
-get(3).then( res => console.log(111,res) )
-get(2).then( res => console.log(111,res) )
-get(1).then( res => {
-	console.log(111,res)
-	a()
-} )
+var p =print('zfx')
 
+p
+.then(function(value){
+    console.log('resolve', p)
+    console.log(value)
+    return 'next'
+})
+.then(function(v){
+    console.log(v)
+    throw new Error('test')
+},function(e){
+	console.log(222,e)
+})
 
-
-function a(){
-		var again = (value) => new Promise( (resolve, reject) => {
-		setTimeout( function(){
-			reject(value)
-		}, 3000)
-	})
-
-	again(3).then( res => console.log(111,res) )
-	again(2).then( res => console.log(111,res) )
-	again(1).then( res => {
-		console.log(111,res)
-		again(res).then(res => console.log('000',res))
-	} )
-}

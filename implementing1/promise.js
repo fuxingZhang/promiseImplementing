@@ -2,29 +2,34 @@ var PENDING = 0;
 var FULFILLED = 1;
 var REJECTED = 2;
 
-function Promise(fn){
+function Promise(fn) {
+  // store state which can be PENDING, FULFILLED or REJECTED
   var state = PENDING;
+
+  // store value once FULFILLED or REJECTED
   var value = null;
+
+  // store sucess & failure handlers
   var handlers = [];
 
-  function fulfill(result){
+  function fulfill(result) {
     state = FULFILLED;
     value = result;
     handlers.forEach(handle);
     handlers = null;
   }
 
-  function reject(error){
+  function reject(error) {
     state = REJECTED;
     value = error;
     handlers.forEach(handle);
     handlers = null;
   }
 
-  function resolve(result){
+  function resolve(result) {
     try {
       var then = getThen(result);
-      if(then){
+      if (then) {
         doResolve(then.bind(result), resolve, reject)
         return
       }
@@ -34,13 +39,13 @@ function Promise(fn){
     }
   }
 
-  function handle(handler){
-    if(state === PENDING){
-      handlers.push(handler)
+  function handle(handler) {
+    if (state === PENDING) {
+      handlers.push(handler);
     } else {
-      if(state === FULFILLED && 
-        typeof handler.onFulfilled === 'function'){
-          handler.onFulfilled(value);
+      if (state === FULFILLED &&
+        typeof handler.onFulfilled === 'function') {
+        handler.onFulfilled(value);
       }
       if (state === REJECTED &&
         typeof handler.onRejected === 'function') {
@@ -49,15 +54,14 @@ function Promise(fn){
     }
   }
 
-  this.done = function(onFulfilled, onRejected){
-    // setTimeout(handle({
-    //     onFulfilled: onFulfilled,
-    //     onRejected: onRejected
-    //   }), 0);
-    process.nextTick(handle({
-      onFulfilled: onFulfilled,
-      onRejected: onRejected
-    }))
+  this.done = function (onFulfilled, onRejected) {
+    // ensure we are always asynchronous
+    setTimeout(function () {
+      handle({
+        onFulfilled: onFulfilled,
+        onRejected: onRejected
+      });
+    }, 0);
   }
 
   this.then = function (onFulfilled, onRejected) {
@@ -87,34 +91,51 @@ function Promise(fn){
     });
   }
 
-  doResolve(fn,resolve,reject)
+  doResolve(fn, resolve, reject);
 }
 
-function getThen(value){
+/**
+ * Check if a value is a Promise and, if it is,
+ * return the `then` method of that promise.
+ *
+ * @param {Promise|Any} value
+ * @return {Function|Null}
+ */
+function getThen(value) {
   var t = typeof value;
-  if(value && (t === 'object' || t === 'function')){
+  if (value && (t === 'object' || t === 'function')) {
     var then = value.then;
-    if(typeof then === 'function'){
-      return then
+    if (typeof then === 'function') {
+      return then;
     }
   }
-  return null
+  return null;
 }
 
-function doResolve(fn, onFulfilled, onRejected){
+/**
+ * Take a potentially misbehaving resolver function and make sure
+ * onFulfilled and onRejected are only called once.
+ *
+ * Makes no guarantees about asynchrony.
+ *
+ * @param {Function} fn A resolver function that may not be trusted
+ * @param {Function} onFulfilled
+ * @param {Function} onRejected
+ */
+function doResolve(fn, onFulfilled, onRejected) {
   var done = false;
-  try{
-    fn(function(value){
-      if(done) return
+  try {
+    fn(function (value) {
+      if (done) return
       done = true
       onFulfilled(value)
-    }, function(reason){
-      if(done) return
+    }, function (reason) {
+      if (done) return
       done = true
       onRejected(reason)
     })
   } catch (ex) {
-    if(done) return
+    if (done) return
     done = true
     onRejected(ex)
   }

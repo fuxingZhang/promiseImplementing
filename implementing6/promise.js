@@ -74,6 +74,20 @@ Promise.prototype.catch = function(onRejected){
     return this.then(null, onRejected);
 }
 
+Promise.resolve = function(value){
+    if( value instanceof this ) return value
+    if (value && (typeof value === 'object' || typeof value === 'function')) {
+        if( typeof value.then === 'function'){
+            return Promise.resolve(value.then)
+        }
+    }
+    return new Promise( resolve => {
+        resolve(value)
+    })
+}
+
+/* =====================================================*/
+
 var print = (value) => new Promise( (resolve,reject) => {
     throw new Error('test0')
 	setTimeout(function(){

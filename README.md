@@ -22,6 +22,10 @@ Implementing Promise in JavaScript to gain a better understanding of how promise
 	}
 */
 
+/* 
+ * begin from here 
+ */
+
 function Promise(resolver){
 	if(typeof resolver !== 'function') throw new TypeError(`Promise resolver ${resolver} is not a function`);
 	this.state = 'pending'
@@ -169,4 +173,5 @@ p
 },function(e){
 	console.log(333333,e)
 })
+
 ```

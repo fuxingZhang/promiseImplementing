@@ -17,6 +17,10 @@
 	}
 */
 
+/* 
+ * begin from here 
+ */
+
 function Promise(resolver){
 	if(typeof resolver !== 'function') throw new TypeError(`Promise resolver ${resolver} is not a function`);
 	this.state = 'pending'

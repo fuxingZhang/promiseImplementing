@@ -61,10 +61,17 @@ Promise.prototype.reject = function(reason){
 };
 
 Promise.prototype.then = function(fulfilled, rejected){
+	if ( typeof fulfilled !== 'function' && typeof rejected !== 'function' ) {
+   return this;
+  }
+  if (typeof fulfilled !== 'function' && this.state === 'fulfilled' ||
+    typeof rejected !== 'function' && this.state === 'rejected') {
+    return this;
+  }
 	var self = this
 	return new Promise( (resolve, reject) => {
 		if(fulfilled && typeof fulfilled == "function"){
-			self.onFulfilled = function (){
+			var onFulfilled = function (){
 				try{
 					var result = fulfilled(self.value)
 					if(result && typeof result.then === 'function'){
@@ -76,9 +83,14 @@ Promise.prototype.then = function(fulfilled, rejected){
 					reject(error)
 				}
 			}
+			if( self.state === 'pending'){
+				self.onFulfilled = onFulfilled
+			}else{
+				onFulfilled()
+			}
 		}
 		if(rejected && typeof rejected == "function"){
-			self.onRejected = function(){
+			var onRejected = function (){
 				try{
 					var result = rejected(self.value)
 					if(result && typeof result.then === 'function'){
@@ -89,6 +101,11 @@ Promise.prototype.then = function(fulfilled, rejected){
 				}catch(error){
 					reject(error)
 				}
+			}
+			if( self.state === 'pending'){
+				self.onRejected = onRejected
+			}else{
+				onRejected()
 			}
 		}
 	})
@@ -173,5 +190,6 @@ p
 },function(e){
 	console.log(333333,e)
 })
+
 
 ```

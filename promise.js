@@ -56,10 +56,17 @@ Promise.prototype.reject = function(reason){
 };
 
 Promise.prototype.then = function(fulfilled, rejected){
+	if ( typeof fulfilled !== 'function' && typeof rejected !== 'function' ) {
+   return this;
+  }
+  if (typeof fulfilled !== 'function' && this.state === 'fulfilled' ||
+    typeof rejected !== 'function' && this.state === 'rejected') {
+    return this;
+  }
 	var self = this
 	return new Promise( (resolve, reject) => {
 		if(fulfilled && typeof fulfilled == "function"){
-			self.onFulfilled = function (){
+			var onFulfilled = function (){
 				try{
 					var result = fulfilled(self.value)
 					if(result && typeof result.then === 'function'){
@@ -71,9 +78,14 @@ Promise.prototype.then = function(fulfilled, rejected){
 					reject(error)
 				}
 			}
+			if( self.state === 'pending'){
+				self.onFulfilled = onFulfilled
+			}else{
+				onFulfilled()
+			}
 		}
 		if(rejected && typeof rejected == "function"){
-			self.onRejected = function(){
+			var onRejected = function (){
 				try{
 					var result = rejected(self.value)
 					if(result && typeof result.then === 'function'){
@@ -84,6 +96,11 @@ Promise.prototype.then = function(fulfilled, rejected){
 				}catch(error){
 					reject(error)
 				}
+			}
+			if( self.state === 'pending'){
+				self.onRejected = onRejected
+			}else{
+				onRejected()
 			}
 		}
 	})
@@ -168,3 +185,64 @@ p
 },function(e){
 	console.log(333333,e)
 })
+
+/* 
+ *Value penetration
+ */
+
+/*
+// one 
+var promise = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('haha')
+  }, 1000)
+})
+console.log(promise)
+setTimeout(function(){
+	console.log(promise)
+},2000)
+
+// two
+var promise = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('haha')
+  }, 1000)
+})
+promise
+  .then('hehe')
+  .then(console.log)
+  .then( v => {
+  	console.log(promise)
+  })
+// three
+var promise = new Promise(function (resolve) {
+  setTimeout(() => {
+    resolve('haha')
+  }, 1000)
+})
+promise.then(() => {
+  promise.then().then((res) => {// ①
+    console.log(res)// haha
+  })
+  promise.catch().then((res) => {// ②
+    console.log(res)// haha
+  })
+  console.log(promise.then() === promise.catch())// true
+  console.log(promise.then(1) === promise.catch({ name: 'nswbmw' }))// true
+})
+// four
+var promise = new Promise((resolve) => {
+  setTimeout(() => {
+    resolve('haha')
+  }, 1000)
+})
+var a = promise.then()
+a.then((res) => {
+  console.log(res)// haha
+})
+var b = promise.catch()
+b.then((res) => {
+  console.log(res)// haha
+})
+console.log(a === b)// false
+*/

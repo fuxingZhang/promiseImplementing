@@ -95,19 +95,51 @@ Promise.all = function(){
 
 }
 
-Promise.resolve = function(){
+Promise.race = function(){
 
 }
 
-Promise.reject = function(){
-
+Promise.resolve = function(value){
+	if(value instanceof this) return value
+	return new Promise( (resolve,reject) => {
+		if(value && typeof value === 'object' && typeof value.then === 'function'){
+			resolve( value.then( v => v))
+		}else{
+			resolve(value)
+		}
+	})
 }
+
+Promise.reject = function(reason){
+	return new Promise( (resolve,reject) => {
+		reject(reason)
+	})
+}
+
 
 /*
  *    test code
  */
+
+var rj = Promise.reject(9)
+console.log(rj)
+rj.catch( v => console.log('reject', v))
+//======================================//
+
+var p = Promise.resolve( new Promise( (resolve,reject)=>{resolve(1)}))
+console.log(p)
+
+//======================================//
+
+var foo = {
+    then: (resolve, reject) => resolve('dddd')
+};
+var resolved = Promise.resolve(foo); 
+
+//======================================//
+
 var print = (value) => new Promise( (resolve,reject) => {
-	//throw new Error('g')
+	throw new Error('g')
 	resolve(value)
 })
 

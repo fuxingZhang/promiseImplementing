@@ -57,12 +57,12 @@ Promise.prototype.reject = function(reason){
 
 Promise.prototype.then = function(fulfilled, rejected){
 	if ( typeof fulfilled !== 'function' && typeof rejected !== 'function' ) {
-   return this;
-  }
-  if (typeof fulfilled !== 'function' && this.state === 'fulfilled' ||
-    typeof rejected !== 'function' && this.state === 'rejected') {
-    return this;
-  }
+		return this;
+	}
+	if (typeof fulfilled !== 'function' && this.state === 'fulfilled' ||
+		typeof rejected !== 'function' && this.state === 'rejected') {
+		return this;
+	}
 	var self = this
 	return new Promise( (resolve, reject) => {
 		if(fulfilled && typeof fulfilled == "function"){

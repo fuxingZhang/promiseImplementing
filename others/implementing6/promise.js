@@ -1,90 +1,108 @@
-function Promise(resolver){
-	if(typeof resolver !== 'function') throw new TypeError(`Promise resolver ${resolver} is not a function`);
-	var state = 'pending'
-	var value = void 0
-    var callbacks = []
-
-    this.then = function(onFulfilled, onRejected){
-		return new Promise( (resolve, reject) =>{
-            handle({
-                onFulfilled: onFulfilled || null,
-                onRejected: onRejected || null,
-                resolve: resolve,
-                reject: reject
-            })
-        })
-    }
-    
-    function handle(callback) {
-        if (state === 'pending') {
-            callbacks.push(callback);
-            return;
-        }
-
-        var cb = state === 'fulfilled' ? callback.onFulfilled : callback.onRejected,
-            ret;
-        if (cb === null) {
-            cb = state === 'fulfilled' ? callback.resolve : callback.reject;
-            cb(value);
-            return;
-        }
-        try {
-            ret = cb(value);
-            callback.resolve(ret);
-        } catch (error) {
-            callback.reject(error);
-        }
-    }
-
-	function resolve(result) {
-        if (result && (typeof result === 'object' || typeof result === 'function')) {
-            var then = result.then;
-            if (typeof then === 'function') {
-                then.call(result, resolve, reject)
-                return;
-            }
-        }
-		value = result
-		state = 'fulfilled'	
-        execute();
-	}
-    
-	function reject(reason) {
-		value = reason
-		state = 'rejected'	
-        execute();
-	}
-
-    function execute() {
-        setTimeout(function () {
-            callbacks.forEach(function (callback) {
-                handle(callback);
-            });
-        }, 0);
-    }
-
-    try{
-		resolver(resolve, reject)
-	}catch(error){
-		reject(error)
-	}
+function INTERNAL() {}
+function isFunction(func) {
+  return typeof func === 'function';
+}
+function isObject(obj) {
+  return typeof obj === 'object';
+}
+function isArray(arr) {
+  return Object.prototype.toString.call(arr) === '[object Array]';
 }
 
-Promise.prototype.catch = function(onRejected){
-    return this.then(null, onRejected);
+var PENDING = 0;
+var FULFILLED = 1;
+var REJECTED = 2;
+
+module.exports = Promise;
+
+function Promise(resolver) {
+  if (!isFunction(resolver)) {
+    throw new TypeError('resolver must be a function');
+  }
+  this.state = PENDING;
+  this.value = void 0;
+  this.queue = [];
+  if (resolver !== INTERNAL) {
+    safelyResolveThen(this, resolver);
+  }
 }
 
-Promise.resolve = function(value){
-    if( value instanceof this ) return value
-    if (value && (typeof value === 'object' || typeof value === 'function')) {
-        if( typeof value.then === 'function'){
-            return Promise.resolve(value.then)
-        }
+function safelyResolveThen(self, then) {
+  var called = false;
+  try {
+    then(function (value) {
+      if (called) {
+        return;
+      }
+      called = true;
+      doResolve(self, value);
+    }, function (error) {
+      if (called) {
+        return;
+      }
+      called = true;
+      doReject(self, error);
+    });
+  } catch (error) {
+    if (called) {
+      return;
     }
-    return new Promise( resolve => {
-        resolve(value)
-    })
+    called = true;
+    doReject(self, error);
+  }
 }
 
-module.exports = Promise
+function doResolve(self, value) {
+  try {
+    var then = getThen(value);
+    if (then) {
+      safelyResolveThen(self, then);
+    } else {
+      self.state = FULFILLED;
+      self.value = value;
+      self.queue.forEach(function (queueItem) {
+        queueItem.callFulfilled(value);
+      });
+    }
+    return self;
+  } catch (error) {
+    return doReject(self, error);
+  }
+}
 
+function doReject(self, error) {
+  self.state = REJECTED;
+  self.value = error;
+  self.queue.forEach(function (queueItem) {
+    queueItem.callRejected(error);
+  });
+  return self;
+}
+
+function getThen(obj) {
+  var then = obj && obj.then;
+  if (obj && (isObject(obj) || isFunction(obj)) && isFunction(then)) {
+    return function appyThen() {
+      then.apply(obj, arguments);
+    };
+  }
+}
+
+Promise.prototype.then = function (onFulfilled, onRejected) {
+  if (!isFunction(onFulfilled) && this.state === FULFILLED ||
+    !isFunction(onRejected) && this.state === REJECTED) {
+    return this;
+  }
+  var promise = new this.constructor(INTERNAL);
+  if (this.state !== PENDING) {
+    var resolver = this.state === FULFILLED ? onFulfilled : onRejected;
+    unwrap(promise, resolver, this.value);
+  } else {
+    this.queue.push(new QueueItem(promise, onFulfilled, onRejected));
+  }
+  return promise;
+};
+
+Promise.prototype.catch = function (onRejected) {
+  return this.then(null, onRejected);
+};

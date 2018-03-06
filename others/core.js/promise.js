@@ -1,3 +1,8 @@
+/*
+ *  https://github.com/then/promise/blob/master/src/core.js
+ */
+
+
 'use strict';
 
 var asap = require('asap/raw');

@@ -1,21 +1,11 @@
-var Promise = require('./promise.js')
-
-var print = (value) => new Promise( (resolve,reject) => {
-    reject(value)
+var Promise = require('./promise')
+var promise = new Promise((resolve) => {
+  setTimeout(() => {
+    resolve('haha')
+  }, 1000)
 })
-
-var p = print('zfx')
-p.then(function(value){
-    console.log(111,value)
-    console.log('resolve', p)
-    return 'resolve'
-},function(reason){
-    console.log('reason',reason)
-    throw new Error('throw')
-    return 'reject'
-})
-.then(function(v){
-    console.log(222,v)
-},function(reason){
-    console.log('reason',reason)
-})
+var a = promise.then(function onSuccess() {})
+var b = promise.catch(function onError() {})
+console.dir(promise, { depth: 10 })
+console.log(promise.queue[0].promise === a)
+console.log(promise.queue[1].promise === b)

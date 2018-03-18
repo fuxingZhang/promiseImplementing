@@ -22,7 +22,9 @@
  */
 
 function Promise(resolver){
-	if(typeof resolver !== 'function') throw new TypeError(`Promise resolver ${resolver} is not a function`);
+	if(typeof resolver !== 'function') {
+		throw new TypeError(`Promise resolver ${resolver} is not a function`)
+	}
 	this.state = 'pending'
 	this.value = void 0
 	try{
@@ -50,7 +52,7 @@ Promise.prototype.reject = function(reason){
 		if(this.onRejected){
 			this.onRejected(reason)
 		}else{
-			throw `(in promise) ${reason}`
+			throw `Uncaught (in promise) ${reason}`
 		}
 	}, 0)
 };
@@ -78,9 +80,9 @@ Promise.prototype.then = function(fulfilled, rejected){
 					reject(error)
 				}
 			}
-			if( self.state === 'pending'){
+			if(self.state === 'pending'){
 				self.onFulfilled = onFulfilled
-			}else{
+			}else if(self.state === 'fulfilled'){
 				onFulfilled()
 			}
 		}
@@ -99,7 +101,7 @@ Promise.prototype.then = function(fulfilled, rejected){
 			}
 			if( self.state === 'pending'){
 				self.onRejected = onRejected
-			}else{
+			}else if(self.state === 'rejected'){
 				onRejected()
 			}
 		}
@@ -113,16 +115,50 @@ Promise.prototype.catch = function(onRejected){
 	return this.then(null, onRejected)
 }
 
-Promise.all = function(){
-
+Promise.all = function(iterable){
+	if(typeof iterable[Symbol.iterator] !== 'function'){
+		throw new TypeError(`${iterable[Symbol.iterator]} is not a function`)
+	}
+	// Array,TypedArray,String,arguments ==> length; Map,Set ==> size 
+	let len = [...iterable].length, i = 0, counter = 0, res = [];
+	return new Promise( (resolve, reject) => {
+		for(let item of iterable){
+			( (i) => {
+				Promise.resolve(item).then(function(value){
+					counter++
+					res[i] = value
+					if(counter == len){
+						resolve(res)
+					}
+				},function(reason){
+					if(!called){
+						reject(reason)
+					}
+				})
+			})(i++)
+		}
+	})
 }
 
-Promise.race = function(){
-
+Promise.race = function(iterable){
+	if(typeof iterable[Symbol.iterator] !== 'function'){
+		throw new TypeError(`${iterable[Symbol.iterator]} is not a function`)
+	}
+	return new Promise( (resolve,reject) => {
+		for(let item of iterable){
+			Promise.resolve(item).then(function(value){
+				resolve(value)
+			},function(reason){
+				reject(reason)
+			})
+		}
+	})
 }
 
 Promise.resolve = function(value){
-	if(value instanceof this) return value
+	//if(value instanceof this) return value
+	//if(value instanceof Promise) return value
+	if(value.constructor !== Promise) return value
 	return new Promise( (resolve,reject) => {
 		if(value && typeof value === 'object' && typeof value.then === 'function'){
 			resolve( value.then( v => v))
@@ -138,54 +174,39 @@ Promise.reject = function(reason){
 	})
 }
 
-
 /*
  *    test code
  */
-
+var myMap = new Map();
+myMap.set(0, "zero");
+myMap.set(1, "one");
+console.log(Promise.all(myMap))
+//======================================//
+var mySet = new Set();
+mySet.add("foobar");
+mySet.add(1);
+mySet.add("baz");
+console.log(Promise.all(mySet))
+//======================================//
 var rj = Promise.reject(9)
 console.log(rj)
 rj.catch( v => console.log('reject', v))
 //======================================//
-
 var p = Promise.resolve( new Promise( (resolve,reject)=>{resolve(1)}))
 console.log(p)
-
+//console.log('0000',Promise.resolve(2).then(() => {}, () => {}) )
 //======================================//
-
 var foo = {
     then: (resolve, reject) => resolve('dddd')
 };
 var resolved = Promise.resolve(foo); 
-
+console.log(resolved)
 //======================================//
-
 var print = (value) => new Promise( (resolve,reject) => {
 	throw new Error('g')
 	resolve(value)
 })
-
 var p = print('zfx')
-p
-//.catch( e => console.log('1234',e) )
-.then(function(value){
-	console.log(111,value)
-	console.log('resolve', p)
-	JSON.pare(2)
-	return 'resolve'
-},function(e){
-	console.log('bbbb',e)
-})
-.catch( e => {
-	console.log(e)
-	return 'catch'
-})
-.then( function(v){
-	console.log('v',v)
-},function(e){
-	console.log(333333,e)
-})
-
 /* 
  *Value penetration
  */

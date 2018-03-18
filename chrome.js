@@ -91,12 +91,48 @@ Promise.prototype.catch = function(onRejected){
 	return this.then(null, onRejected)
 }
 
-Promise.all = function(){
-
+Promise.prototype.catch = function(onRejected){
+	return this.then(null, onRejected)
 }
 
-Promise.race = function(){
+Promise.all = function(iterable){
+	if(typeof iterable[Symbol.iterator] !== 'function'){
+		throw new TypeError(`${iterable[Symbol.iterator]} is not a function`)
+	}
+	// Array,TypedArray,String,arguments ==> length; Map,Set ==> size 
+	let len = [...iterable].length, i = 0, counter = 0, res = [];
+	return new Promise( (resolve, reject) => {
+		for(let item of iterable){
+			( (i) => {
+				Promise.resolve(item).then(function(value){
+					counter++
+					res[i] = value
+					if(counter == len){
+						resolve(res)
+					}
+				},function(reason){
+					if(!called){
+						reject(reason)
+					}
+				})
+			})(i++)
+		}
+	})
+}
 
+Promise.race = function(iterable){
+	if(typeof iterable[Symbol.iterator] !== 'function'){
+		throw new TypeError(`${iterable[Symbol.iterator]} is not a function`)
+	}
+	return new Promise( (resolve,reject) => {
+		for(let item of iterable){
+			Promise.resolve(item).then(function(value){
+				resolve(value)
+			},function(reason){
+				reject(reason)
+			})
+		}
+	})
 }
 
 Promise.resolve = function(value){
